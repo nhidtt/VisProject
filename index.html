@@ -19,25 +19,48 @@
     <div id="main">
         <div class="overall-container flex-box">
             <div class="top-nav">
-                <h3>Select Month:</h3>
+                <h1>US Domestic Delayed and Canceled Flights 2020</h1>
             </div>
             <div class="graphs-container">
                 <div class="flex-box top">
                     <div class="overview-map-container">
-                        <h2 class="graph-title">Overview</h2>
+                        <h3 class="graph-title">Delay / Canceled Flights Overview</h3>
                         <div class="overview-graph-wrapper">
                             <div id="overviewGraph"></div>
                         </div>
                     </div>
-                   
-                </div>
-                 <!--end left-->
-                 <div class="flex-box bottom">
-                    <h3 class="title"> </h3>
-                    <div id="adjacencyMatrix">
-                        
+
+                    <!--end over view-->
+                    <div class="detail-maps-container">
+
+                        <div class="cancel-graph-wrapper">
+                            <h3 class="graph-title">Cancelled Flights</h3>
+                            <div id="cancelParallelSet"></div>
+                        </div>
+                        <div class="delay-graph-wrapper">
+                            <h3 class="graph-title">Delayed Flights</h3>
+                            <div id="delayPC"></div>
+                            <h4>Detailed delay time for each reason</h4>
+                            <div id="delayViolinPlot"></div>
+                        </div>
                     </div>
-                 </div>
+                </div>
+                <!--end left-->
+                <div class="flex-box bottom">
+                    <h3 class="title">Delay / Canceled Flights Co-occurence between States</h3>
+                    <div class="selector-wrapper">
+                        <label for="adSelector">Order by:</label>
+
+                        <select name="adSelector" id="adSelector">
+                           
+                            <option value="occurence" selected>Occurence</option>
+                            <option value="name">Name</option>
+                        </select>
+                    </div>
+                    <div id="adjacencyMatrix">
+
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -45,9 +68,17 @@
 </body>
 <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
 <script src="js/d3.min.js"></script>
+<!-- <script src="https://d3js.org/d3.v5.min.js"></script> -->
 <script src="js/node-pie.js"></script>
-<script src="js/main.js"></script>
+<script src="https://unpkg.com/shape2path@3.0.5/build/shape2path.min.js"></script>
+<script src="https://unpkg.com/d3-array@1"></script>
+<script src="https://unpkg.com/d3-collection@1"></script>
+<script src="https://unpkg.com/d3-path@1"></script>
+<script src="https://unpkg.com/d3-shape@1"></script>
+<script src="https://unpkg.com/d3-sankey@0"></script>
 <script src="https://cdnjs.com/libraries/d3-legend"></script>
+<script src="js/main.js"></script>
+
 
 <script>
 
