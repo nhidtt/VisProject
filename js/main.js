@@ -19,21 +19,48 @@ function countFlight(name, count_data, flight_status) {
 
 
 $(document).ready(function () {
+
     $('.detail-maps-container').hide();
-    drawOverviewNodeLink();
+    drawOverviewNodeLink("0"); //set default month
 
-    drawAdjacencyMatrix('occurence');
+    drawAdjacencyMatrix('occurence', "0"); //show by occurrence by default
 
-    // drawCancelParallelSet("WA");
+    $('#adSelector').change(function () {
+        var orderOpt = $(this).val();
+        var month = $('#monthSelector').val();
+        $(adMatrixId).empty();
+        drawAdjacencyMatrix(orderOpt, month);
 
-    // drawDelayPC("NJ");
+    });
 
-    // drawDelayViolinPlot("WA");
+    $('#monthSelector').change(function () {
+        var month = $(this).val();
+        var orderOpt = $("#adSelector").val();
+        $(overviewGraphId).empty();
+        drawOverviewNodeLink(month);
+        $(adMatrixId).empty();
+        drawAdjacencyMatrix(orderOpt, month);
+        //reset other charts
+        $('.cancel-graph-wrapper').hide();
+        $(parallelSetId).empty();
+        $(delayPCId).empty();
+        $('.delay-graph-wrapper').hide();
+        $(delayViolinPlotId).empty();
 
-
+    });
 });
+
+function filterDataByMonth(data, month) {
+    var result = [];
+    data.forEach(item => {
+        if (item.MONTH == month) {
+            result.push(item);
+        }
+    });
+    return result;
+}
 //NODE LINK DIAGRAM
-function drawOverviewNodeLink() {
+function drawOverviewNodeLink(month) {
     var width = 600,
         height = 500;
 
@@ -48,10 +75,13 @@ function drawOverviewNodeLink() {
     var sizeScale = d3.scaleQuantize().domain([1, 140])
         .range([10, 20, 30, 35, 40, 45]);
 
-    d3.csv(data_src).then(function (data) {
+    d3.csv(data_src).then(function (rawData) {
 
         var nodesByName = {};
-
+        var data = rawData;
+        if (month != "0") {
+            data = filterDataByMonth(rawData, month);
+        }
         data.forEach(function (link) {
             link.source = nodeByName(link.ORIGIN_STATE_ABR, link.ORIGIN_STATE_NM);
             link.target = nodeByName(link.DEST_STATE_ABR, link.DEST_STATE_NM);
@@ -118,7 +148,27 @@ function drawOverviewNodeLink() {
         //     .attr('fill', function (d) {
         //         return (colors(d.data.key))
         //     });
+        node.selectAll("path")
+            .data(function (d, i) {
+                console.log(getPieData(d));
+                return getPieData(d);
+            })
+            .enter()
+        // .append("svg:path")
+        // .attr('d', d3.arc()
+        //     .innerRadius(0)
+        //     .outerRadius(function (d) {
+        //         return (d.total_cancel + d.total_delay);
+        //     })
+        // )
+        // .attr("fill", function (d, i) {
+        //     // console.log(d);
+        //     return colors(d.data.value);
+        // });
 
+        var arc = d3.arc()
+            .outerRadius(25)
+            .innerRadius(0);
 
         function getPieData(n) {
             const arcs = [];
@@ -147,7 +197,7 @@ function drawOverviewNodeLink() {
             $(delayViolinPlotId).empty();
             $('.detail-maps-container').show();
             if (d.total_cancel > 0) {
-                drawCancelParallelSet(d.name);
+                drawCancelParallelSet(d.name, month);
                 $('.cancel-graph-wrapper').show();
             } else {
                 $('.cancel-graph-wrapper').hide();
@@ -165,7 +215,7 @@ function drawOverviewNodeLink() {
         node.on("mouseover", function (e, d) {
             link.style('stroke', function (l) {
                 if (d === l.source) return "#FF3220";
-                else return "#94A3B8";
+                else return "#C5D1E1";
             });
 
             tooltip.style("top", d3.select(this).attr("cy") + "px");
@@ -173,7 +223,7 @@ function drawOverviewNodeLink() {
             tooltip.html("<b>" + d.fullname + "</b><br/>Canceled: <b>" + d.total_cancel + "</b><br/> Delayed: <b>" + d.total_delay) + "</b>";
             return tooltip.style("visibility", "visible");
         }).on("mouseout", function () {
-            link.style('stroke', "#94A3B8");
+            link.style('stroke', "#C5D1E1");
             return tooltip.style("visibility", "hidden");
         })
 
@@ -245,7 +295,7 @@ function drawOverviewNodeLink() {
 }
 
 
-function drawAdjacencyMatrix(sort) {
+function drawAdjacencyMatrix(sort, month) {
 
     var width = 1100,
         height = 1000;
@@ -254,9 +304,12 @@ function drawAdjacencyMatrix(sort) {
         .append("div")
         .attr("class", "ad-tooltip");
     // $(adMatrixId).show();
-    d3.csv(data_src).then(function (data) {
+    d3.csv(data_src).then(function (rawData) {
         var nodesByCity = {};
-
+        var data = rawData;
+        if (month != "0") {
+            data = filterDataByMonth(rawData, month);
+        }
         data.forEach(function (link) {
             link.source = nodeByCity(link.ORIGIN_STATE_NM);
             link.target = nodeByCity(link.DEST_STATE_NM);
@@ -402,12 +455,6 @@ function drawAdjacencyMatrix(sort) {
     });
 }
 
-$('#adSelector').change(function () {
-    var selectedVal = $(this).val();
-    $(adMatrixId).empty();
-    drawAdjacencyMatrix(selectedVal);
-
-});
 
 function sortByFrequency(data) {
     var result = {};
@@ -451,8 +498,8 @@ function sortByName(matrixData) {
 const IS_CANCELLED_CODE = 1;
 const IS_DELAYED_CODE = 0;
 
-function drawCancelParallelSet(state_abr) {
-
+function drawCancelParallelSet(state_abr, month) {
+    $('.cancel-graph-wrapper').hide();
     var width = 700,
         height = 600;
 
@@ -460,8 +507,12 @@ function drawCancelParallelSet(state_abr) {
     d3.csv(data_src).then(function (data) {
         var attr = ["ORIGIN_CITY_NAME", "DEST_CITY_NAME", "REASON", "FL_DATE"];
 
-        const filteredData = getFlightsByState(data, state_abr, IS_CANCELLED_CODE);
-        console.log(filteredData);
+        var filteredData = getFlightsByState(data, state_abr, IS_CANCELLED_CODE);
+
+        if (month != "0") {
+            filteredData = filterDataByMonth(filteredData, month);
+        }
+
         var nodeLinkData = getNodeLinkFromData(attr, filteredData);
         // console.log(nodeLinkData);
 
@@ -517,7 +568,7 @@ function drawCancelParallelSet(state_abr) {
                 });
             })
             .on("mouseout", function () {
-                return "#BDC5D0"
+                path.style("stroke", "#BDC5D0");
             });
 
         parallelSet.append("g")
@@ -531,7 +582,6 @@ function drawCancelParallelSet(state_abr) {
             .attr("text-anchor", d => d.x0 < width / 2 ? "start" : "end")
             .text(d => d.name)
             .append("tspan")
-            .attr("fill-opacity", 1)
             .text(d => ` ${d.value.toLocaleString()}`);
 
     });
@@ -552,6 +602,7 @@ function sortData(data) {
 }
 
 function drawDelayPC(state_abr) {
+    $('.delay-graph-wrapper').hide();
     var width = 700,
         height = 400,
         margin = ({
@@ -568,7 +619,7 @@ function drawDelayPC(state_abr) {
             DEST_CITY_NAME: "Destination City",
             FL_DATE: "Date",
             DEP_DELAY: "Departure Delay (Min)"
-            
+
         })
     );
     let activeBrushes = new Map();
