@@ -148,12 +148,12 @@ function drawOverviewNodeLink(month) {
         //     .attr('fill', function (d) {
         //         return (colors(d.data.key))
         //     });
-        node.selectAll("path")
-            .data(function (d, i) {
-                console.log(getPieData(d));
-                return getPieData(d);
-            })
-            .enter()
+        // node.selectAll("path")
+        //     .data(function (d, i) {
+        //         console.log(getPieData(d));
+        //         return getPieData(d);
+        //     })
+        //     .enter()
         // .append("svg:path")
         // .attr('d', d3.arc()
         //     .innerRadius(0)
@@ -508,7 +508,6 @@ function drawCancelParallelSet(state_abr, month) {
         var attr = ["ORIGIN_CITY_NAME", "DEST_CITY_NAME", "REASON", "FL_DATE"];
 
         var filteredData = getFlightsByState(data, state_abr, IS_CANCELLED_CODE);
-
         if (month != "0") {
             filteredData = filterDataByMonth(filteredData, month);
         }
@@ -535,6 +534,7 @@ function drawCancelParallelSet(state_abr, month) {
 
         const color = d3.scaleOrdinal(d3.schemeAccent);
         //draw parallel set
+        //reference: https://observablehq.com/@d3/parallel-sets
         const parallelSet = d3.select(parallelSetId).append("svg").attr("width", width).attr("height", height);
         //append node
         parallelSet.append("g")
@@ -594,7 +594,7 @@ function sortData(data) {
         var newItem = new Object();
         newItem.ORIGIN_CITY_NAME = item.ORIGIN_CITY_NAME;
         newItem.DEST_CITY_NAME = item.DEST_CITY_NAME;
-        newItem.DEP_DELAY = item.DEP_DELAY;
+        newItem.DEP_DELAY = parseInt(item.DEP_DELAY);
         newItem.FL_DATE = item.FL_DATE;
         result.push(newItem);
     });
@@ -627,7 +627,6 @@ function drawDelayPC(state_abr) {
     d3.csv(data_src).then(function (data) {
         const flightList = getFlightsByState(data, state_abr, IS_DELAYED_CODE);
         const filteredData = sortData(flightList);
-
         var adjusted_height = height - margin.top - margin.bottom;
         var adjusted_width = width - margin.left - margin.right;
         var axesData = [{
@@ -657,12 +656,11 @@ function drawDelayPC(state_abr) {
 
         var line = d3.line(),
             axis = d3.axisRight();
-
-
         //sort data
         //reference: https://observablehq.com/@ravengao/parallel-coordinates-for-discriminate-patterns
         x.domain(
             (axesData = d3.keys(filteredData[0]).filter(function (d) {
+                console.log(d);
                 if (attributes.includes(d)) {
                     return (y[d] = d3
                         .scalePoint()
@@ -677,10 +675,12 @@ function drawDelayPC(state_abr) {
             .attr("width", width).attr("height", height);
         delayPC.append("style").text("path.hidden { stroke: #000; stroke-opacity: 0.1 !important;}");;
 
+        //sort data
+
         const polylines = delayPC
             .append("g")
             .selectAll("path")
-            .data(filteredData)
+            .data(filteredData.slice().sort((a, b) => d3.ascending(a.DEP_DELAY, b.DEP_DELAY)))
             .enter()
             .append("path")
             .attr("d", path)
@@ -716,7 +716,7 @@ function drawDelayPC(state_abr) {
         function path(d) {
             return line(
                 axesData.map(function (p) {
-                    return [x(p), y[p](d[p]) + Math.random()];
+                    return [x(p), y[p](d[p])];
                 })
             );
         }
@@ -774,6 +774,7 @@ function drawDelayPC(state_abr) {
 function filterDataForViolinPlot(data, reasons) {
     var result = {};
     var max = 0;
+    var min = 0;
     var convertData = [];
     var convertRecord = {};
     data.forEach(function (item) {
@@ -787,6 +788,9 @@ function filterDataForViolinPlot(data, reasons) {
         if (parseInt(item.CARRIER_DELAY) > max) {
             max = parseInt(item.CARRIER_DELAY);
         }
+        if (parseInt(item.CARRIER_DELAY) < min) {
+            min = parseInt(item.CARRIER_DELAY);
+        }
 
         //NAS reason
         convertRecord = {};
@@ -796,6 +800,9 @@ function filterDataForViolinPlot(data, reasons) {
 
         if (parseInt(item.NAS_DELAY) > max) {
             max = parseInt(item.NAS_DELAY);
+        }
+        if (parseInt(item.NAS_DELAY) < min) {
+            min = parseInt(item.NAS_DELAY);
         }
 
         //Security reason
@@ -807,6 +814,9 @@ function filterDataForViolinPlot(data, reasons) {
         if (parseInt(item.SECURITY_DELAY) > max) {
             max = parseInt(item.SECURITY_DELAY);
         }
+        if (parseInt(item.SECURITY_DELAY) < min) {
+            min = parseInt(item.SECURITY_DELAY);
+        }
 
         //Weather reason
         convertRecord = {};
@@ -816,6 +826,9 @@ function filterDataForViolinPlot(data, reasons) {
 
         if (parseInt(item.WEATHER_DELAY) > max) {
             max = item.WEATHER_DELAY;
+        }
+        if (parseInt(item.WEATHER_DELAY) < min) {
+            min = parseInt(item.WEATHER_DELAY);
         }
 
         //Late Air Craft reason
@@ -827,13 +840,16 @@ function filterDataForViolinPlot(data, reasons) {
         if (parseInt(item.LATE_AIRCRAFT_DELAY) > max) {
             max = parseInt(item.LATE_AIRCRAFT_DELAY);
         }
+        if (parseInt(item.LATE_AIRCRAFT_DELAY) < min) {
+            min = parseInt(item.LATE_AIRCRAFT_DELAY);
+        }
     });
-    console.log(convertData);
     result.data = convertData;
     result.max = max;
+    result.min = min;
     return result;
 }
-//reference: https://www.d3-graph-gallery.com/graph/violin_jitter.html
+
 function drawDelayViolinPlot(state_abr) {
     var margin = {
             top: 10,
@@ -857,9 +873,10 @@ function drawDelayViolinPlot(state_abr) {
         const filteredData = getFlightsByState(data, state_abr, IS_DELAYED_CODE);
 
         const dataToProcess = filterDataForViolinPlot(filteredData, reasons);
+        //reference: https://www.d3-graph-gallery.com/graph/violin_jitter.html
 
         var y = d3.scaleLinear()
-            .domain([0, dataToProcess.max])
+            .domain([dataToProcess.min, dataToProcess.max])
             .range([height, 0]);
         delayViolinPlot.append("g").call(d3.axisLeft(y));
 
